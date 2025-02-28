@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
-
+import { Trash2, Upload, Plus, Camera } from "lucide-react"
 interface ImageField {
   id: string
   file: File | null
@@ -45,7 +45,7 @@ export default function InspectionForm() {
                       </div>
                     ) : (
                       <div className="text-center p-4">
-                        Camera LOGO
+                        <Camera className="mx-auto h-12 w-12 text-gray-400" />
                         <p className="mt-2 text-sm text-gray-500">Click to upload an image</p>
                         <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
                       </div>
@@ -72,7 +72,7 @@ export default function InspectionForm() {
 
                   <div className="flex justify-end mt-4">
                     <Button type="button" variant="destructive" size="sm" >
-                      TRASHBIN LOGO
+                    <Trash2 className="h-4 w-4 mr-2" />
                       Remove
                     </Button>
                   </div>
@@ -89,13 +89,13 @@ export default function InspectionForm() {
             className="flex-1"
             disabled={!imageFields[imageFields.length - 1].file}
           >
-            ADD OR PLUS LOGO
+            <Plus className="h-4 w-4 mr-2" />
             Add Another Image
           </Button>
 
           <Button type="submit" className="flex-1" >
               <>
-                UPLOAD LOGO
+                <Upload className="h-4 w-4 mr-2" />
                 Submit Inspection
               </>
           </Button>
