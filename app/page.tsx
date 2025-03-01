@@ -4,21 +4,21 @@ import type React from "react"
 
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Upload, Plus, Camera } from "lucide-react"
+import { Textarea } from "@/components/ui/textarea"
 
 interface ImageField {
   id: string
   file: File | null
   preview: string
-  label: string
+  description: string
 }
 
 export default function InspectionForm() {
   const [imageFields, setImageFields] = useState<ImageField[]>([
-    { id: crypto.randomUUID(), file: null, preview: "", label: "" },
+    { id: crypto.randomUUID(), file: null, preview: "", description: "" },
   ])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -29,12 +29,12 @@ export default function InspectionForm() {
       return
     }
 
-    setImageFields([...imageFields, { id: crypto.randomUUID(), file: null, preview: "", label: "" }])
+    setImageFields([...imageFields, { id: crypto.randomUUID(), file: null, preview: "", description: "" }])
   }
 
   const removeImageField = (id: string) => {
     if (imageFields.length === 1) {
-      setImageFields([{ id: crypto.randomUUID(), file: null, preview: "", label: "" }])
+      setImageFields([{ id: crypto.randomUUID(), file: null, preview: "", description: "" }])
     } else {
       setImageFields(imageFields.filter((field) => field.id !== id))
     }
@@ -80,7 +80,7 @@ export default function InspectionForm() {
           id: newId,
           file: files[i],
           preview: URL.createObjectURL(files[i]),
-          label: "",
+          description: "",
         })
       }
 
@@ -89,8 +89,8 @@ export default function InspectionForm() {
     }
   }
 
-  const handleLabelChange = (id: string, value: string) => {
-    setImageFields((prev) => prev.map((field) => (field.id === id ? { ...field, label: value } : field)))
+  const handleDescriptionChange = (id: string, value: string) => {
+    setImageFields((prev) => prev.map((field) => (field.id === id ? { ...field, description: value } : field)))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -105,10 +105,9 @@ export default function InspectionForm() {
     }
 
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
-      setImageFields([{ id: crypto.randomUUID(), file: null, preview: "", label: "" }])
+      setImageFields([{ id: crypto.randomUUID(), file: null, preview: "", description: "" }])
     } catch (error) {
       console.error("Submission failed:", error)
     } finally {
@@ -121,75 +120,88 @@ export default function InspectionForm() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-3xl">
-      <h1 className="text-2xl font-bold mb-6">Mini Inspection Form</h1>
+    <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold">Mini Inspection Form</h1>
+        <p className="text-muted-foreground mt-1">Upload the inspection images</p>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {imageFields.map((field, index) => (
-          <Card key={field.id} className="overflow-hidden">
-            <CardContent className="p-4">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <div
-                    className={`border-2 border-dashed rounded-lg h-48 flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                      field.preview ? "border-transparent" : "border-gray-300 hover:border-primary"
-                    }`}
-                    onClick={() => triggerFileInput(field.id)}
-                  >
-                    {field.preview ? (
-                      <div className="relative w-full h-full">
-                        <img
-                          src={field.preview || "/placeholder.svg"}
-                          alt="Preview"
-                          className="w-full h-full object-contain"
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-center p-4">
-                        <Camera className="mx-auto h-12 w-12 text-gray-400" />
-                        <p className="mt-2 text-sm text-gray-500">Click to upload an image</p>
-                        <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
-                      </div>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple={!field.file}
-                      className="hidden"
-                      onChange={(e) => handleFileChange(e, field.id)}
-                      ref={(el) => {
-                        if (el) fileInputRefs.current[field.id] = el
-                      }}
-                    />
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="space-y-6">
+          {imageFields.map((field, index) => (
+            <Card key={field.id} className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <Label className="mb-2 block">Upload Image</Label>
+                    <div
+                      className={`border-2 border-dashed rounded-lg h-[280px] flex flex-col items-center justify-center cursor-pointer transition-colors ${
+                        field.preview ? "border-transparent" : "border-gray-300 hover:border-primary"
+                      }`}
+                      onClick={() => triggerFileInput(field.id)}
+                    >
+                      {field.preview ? (
+                        <div className="relative w-full h-full">
+                          <img
+                            src={field.preview || "/placeholder.svg"}
+                            alt="Preview"
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                      ) : (
+                        <div className="text-center p-4">
+                          <Camera className="mx-auto h-12 w-12 text-gray-400" />
+                          <p className="mt-2 text-sm text-gray-500">Click to upload an image</p>
+                          <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple={!field.file}
+                        className="hidden"
+                        onChange={(e) => handleFileChange(e, field.id)}
+                        ref={(el) => {
+                          if (el) fileInputRefs.current[field.id] = el
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="flex-1">
+                      <Label htmlFor={`description-${field.id}`}>Description</Label>
+                      <Textarea
+                        id={`description-${field.id}`}
+                        placeholder="Enter image description"
+                        value={field.description}
+                        onChange={(e) => handleDescriptionChange(field.id, e.target.value)}
+                        disabled={!field.file}
+                        className="mt-1.5 min-h-[200px] resize-none"
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        className="cursor-pointer"
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeImageField(field.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove Image
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-                <div className="flex-1 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <Label htmlFor={`label-${field.id}`}>Image Label</Label>
-                    <Input
-                      id={`label-${field.id}`}
-                      placeholder="Enter a descriptive label"
-                      value={field.label}
-                      onChange={(e) => handleLabelChange(field.id, e.target.value)}
-                      disabled={!field.file}
-                    />
-                  </div>
-
-                  <div className="flex justify-end mt-4">
-                    <Button className="cursor-pointer" type="button" variant="destructive" size="sm" onClick={() => removeImageField(field.id)}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Button 
+        <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t">
+          <Button
             type="button"
             variant="outline"
             onClick={addImageField}
