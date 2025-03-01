@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { Trash2, Upload, Plus, Camera } from "lucide-react"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/components/ui/custom-toast"
 
 interface ImageField {
   id: string
   file: File | null
   preview: string
   description: string
+  error?: boolean
 }
 
 export default function InspectionForm() {
@@ -22,6 +24,7 @@ export default function InspectionForm() {
   ])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const { showToast, ToastContainer } = useToast()
 
   const addImageField = () => {
     const lastField = imageFields[imageFields.length - 1]
@@ -49,7 +52,9 @@ export default function InspectionForm() {
     if (currentField?.file) {
       const file = files[0]
       setImageFields((prev) =>
-        prev.map((field) => (field.id === id ? { ...field, file, preview: URL.createObjectURL(file) } : field)),
+        prev.map((field) =>
+          field.id === id ? { ...field, file, preview: URL.createObjectURL(file), error: false } : field,
+        ),
       )
       return
     }
@@ -57,7 +62,9 @@ export default function InspectionForm() {
     if (files.length === 1) {
       const file = files[0]
       setImageFields((prev) =>
-        prev.map((field) => (field.id === id ? { ...field, file, preview: URL.createObjectURL(file) } : field)),
+        prev.map((field) =>
+          field.id === id ? { ...field, file, preview: URL.createObjectURL(file), error: false } : field,
+        ),
       )
       return
     }
@@ -71,6 +78,7 @@ export default function InspectionForm() {
         ...updatedFields[currentFieldIndex],
         file: firstFile,
         preview: URL.createObjectURL(firstFile),
+        error: false,
       }
 
       const newFields: ImageField[] = []
@@ -90,26 +98,40 @@ export default function InspectionForm() {
   }
 
   const handleDescriptionChange = (id: string, value: string) => {
-    setImageFields((prev) => prev.map((field) => (field.id === id ? { ...field, description: value } : field)))
+    setImageFields((prev) =>
+      prev.map((field) => (field.id === id ? { ...field, description: value, error: false } : field)),
+    )
+  }
+
+  const validateFields = () => {
+    let isValid = true
+    const updatedFields = imageFields.map((field) => {
+      const hasError = !field.file || !field.description.trim()
+      if (hasError) isValid = false
+      return { ...field, error: hasError }
+    })
+
+    setImageFields(updatedFields)
+    return isValid
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
 
-    const filledFields = imageFields.filter((field) => field.file !== null)
-
-    if (filledFields.length === 0) {
-      setIsSubmitting(false)
+    if (!validateFields()) {
+      showToast("Please fill in all required fields", "error")
       return
     }
 
+    setIsSubmitting(true)
+
     try {
       await new Promise((resolve) => setTimeout(resolve, 1500))
-
+      showToast("Inspection submitted successfully!", "success")
       setImageFields([{ id: crypto.randomUUID(), file: null, preview: "", description: "" }])
     } catch (error) {
       console.error("Submission failed:", error)
+      showToast("Failed to submit inspection", "error")
     } finally {
       setIsSubmitting(false)
     }
@@ -121,6 +143,8 @@ export default function InspectionForm() {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
+      <ToastContainer />
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold">Mini Inspection Form</h1>
         <p className="text-muted-foreground mt-1">Upload the inspection images</p>
@@ -133,10 +157,17 @@ export default function InspectionForm() {
               <CardContent className="p-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <Label className="mb-2 block">Upload Image</Label>
+                    <Label className="mb-2 block">
+                      Upload Image
+                      {field.error && !field.file && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
                     <div
                       className={`border-2 border-dashed rounded-lg h-[280px] flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                        field.preview ? "border-transparent" : "border-gray-300 hover:border-primary"
+                        field.preview
+                          ? "border-transparent"
+                          : field.error && !field.file
+                            ? "border-red-500 hover:border-red-600"
+                            : "border-gray-300 hover:border-primary"
                       }`}
                       onClick={() => triggerFileInput(field.id)}
                     >
@@ -150,8 +181,14 @@ export default function InspectionForm() {
                         </div>
                       ) : (
                         <div className="text-center p-4">
-                          <Camera className="mx-auto h-12 w-12 text-gray-400" />
-                          <p className="mt-2 text-sm text-gray-500">Click to upload an image</p>
+                          <Camera
+                            className={`mx-auto h-12 w-12 ${field.error && !field.file ? "text-red-500" : "text-gray-400"}`}
+                          />
+                          <p
+                            className={`mt-2 text-sm ${field.error && !field.file ? "text-red-500" : "text-gray-500"}`}
+                          >
+                            Click to upload an image
+                          </p>
                           <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 10MB</p>
                         </div>
                       )}
@@ -170,14 +207,19 @@ export default function InspectionForm() {
 
                   <div className="space-y-4">
                     <div className="flex-1">
-                      <Label htmlFor={`description-${field.id}`}>Description</Label>
+                      <Label htmlFor={`description-${field.id}`} className="flex items-center gap-1">
+                        Description
+                        {field.error && !field.description && <span className="text-red-500">*</span>}
+                      </Label>
                       <Textarea
                         id={`description-${field.id}`}
                         placeholder="Enter image description"
                         value={field.description}
                         onChange={(e) => handleDescriptionChange(field.id, e.target.value)}
                         disabled={!field.file}
-                        className="mt-1.5 min-h-[200px] resize-none"
+                        className={`mt-1.5 min-h-[200px] resize-none ${
+                          field.error && !field.description ? "border-red-500 focus-visible:ring-red-500" : ""
+                        }`}
                       />
                     </div>
 
@@ -230,4 +272,3 @@ export default function InspectionForm() {
     </div>
   )
 }
-
