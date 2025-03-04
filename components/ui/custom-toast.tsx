@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import { X } from "lucide-react"
 
 interface Toast {
@@ -9,36 +9,17 @@ interface Toast {
   type: "success" | "error"
 }
 
-interface ToastProps {
-  message: string
-  type: "success" | "error"
-  onClose: () => void
+interface ToastContextType {
+  showToast: (message: string, type: "success" | "error") => void
 }
 
-export function Toast({ message, type, onClose }: ToastProps) {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose()
-    }, 3000)
+const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
-    return () => clearTimeout(timer)
-  }, [onClose])
-
-  return (
-    <div
-      className={`rounded-lg p-4 shadow-lg flex items-center justify-between ${
-        type === "success" ? "bg-green-600" : "bg-red-600"
-      } text-white`}
-    >
-      <span>{message}</span>
-      <button onClick={onClose} className="ml-4 hover:opacity-80">
-        <X className="h-4 w-4" />
-      </button>
-    </div>
-  )
+interface ToastProviderProps {
+  children: ReactNode
 }
 
-export function useToast() {
+export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<Toast[]>([])
 
   const showToast = (message: string, type: "success" | "error") => {
@@ -50,14 +31,46 @@ export function useToast() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
   }
 
-  const ToastContainer = () => (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-sm">
-      {toasts.map((toast) => (
-        <Toast key={toast.id} message={toast.message} type={toast.type} onClose={() => removeToast(toast.id)} />
-      ))}
-    </div>
-  )
+  useEffect(() => {
+    if (toasts.length > 0) {
+      const timeouts = toasts.map((toast) => {
+        return setTimeout(() => {
+          removeToast(toast.id)
+        }, 2000) // 2 seconds
+      })
 
-  return { showToast, ToastContainer }
+      return () => {
+        timeouts.forEach((timeout) => clearTimeout(timeout))
+      }
+    }
+  }, [toasts]) 
+
+  return (
+    <ToastContext.Provider value={{ showToast }}>
+      {children}
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className={`rounded-lg p-4 shadow-lg flex items-center justify-between ${
+              toast.type === "success" ? "bg-green-600" : "bg-red-600"
+            } text-white animate-in slide-in-from-right-full`}
+          >
+            <span>{toast.message}</span>
+            <button onClick={() => removeToast(toast.id)} className="ml-4 hover:opacity-80">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </ToastContext.Provider>
+  )
 }
 
+export function useToast() {
+  const context = useContext(ToastContext)
+  if (context === undefined) {
+    throw new Error("useToast must be used within a ToastProvider")
+  }
+  return context
+}
